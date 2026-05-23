@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MooN Attacks — Intelligence Report</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0c10; --bg2: #0f1318; --bg3: #141920;
+            --border: #1e2730; --accent: #00b4ff; --text: #e0e6ed; --text2: #7a8a99;
+            --explosion: #ff4444; --drone: #ff9900; --missile: #cc44ff;
+            --shot_down: #00ff88; --unknown: #7a8a99;
+        }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', monospace; min-height: 100vh; }
+
+        /* HEADER */
+        .header {
+            position: sticky; top: 0; z-index: 100;
+            background: var(--bg2); border-bottom: 1px solid var(--border);
+            padding: 10px 24px; display: flex; align-items: center; gap: 12px;
+        }
+        .logo { font-size: 1rem; font-weight: bold; color: var(--accent); }
+        .header-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+        .btn { background: var(--accent); color: #000; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.78rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+        .btn.secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+        .btn.secondary:hover { border-color: var(--accent); color: var(--accent); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn.pdf  { background: #1a1040; color: #a855f7; border: 1px solid #a855f7; }
+        .btn.html { background: #0a2010; color: #00ff88; border: 1px solid #00ff88; }
+        .btn.word { background: #001a30; color: #2b7cd3; border: 1px solid #2b7cd3; }
+
+        /* CONFIG */
+        .config { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+        .config-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+        .config-title { font-size: 0.78rem; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 14px; }
+        .config-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+        .config-label { font-size: 0.75rem; color: var(--text2); min-width: 60px; }
+        .dt-input { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 0.78rem; }
+        .dt-input:focus { outline: none; border-color: var(--accent); }
+        .route-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+        .route-tag { background: var(--bg3); border: 1px solid var(--accent); color: var(--accent); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; display: flex; align-items: center; gap: 5px; }
+        .route-tag button { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 0.8rem; }
+        .route-input-wrap { display: flex; gap: 6px; }
+        .route-input-wrap input { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 5px 10px; border-radius: 6px; font-size: 0.78rem; width: 160px; }
+        .route-input-wrap input:focus { outline: none; border-color: var(--accent); }
+
+        /* REPORT WRAP */
+        .report-wrap { max-width: 900px; margin: 20px auto 40px; padding: 0 16px; }
+
+        /* MINI MAP */
+        .report-map-section { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; overflow: hidden; display: none; }
+        .report-map-header { padding: 10px 16px; font-size: 0.78rem; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+        #report-map { height: 340px; }
+        .map-legend-report { display: flex; gap: 14px; padding: 8px 16px; flex-wrap: wrap; }
+        .leg-item { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: var(--text2); }
+        .leg-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        /* NASA FIRMS */
+        .firms-section { background: #0d1a0a; border: 1px solid #1a3a10; border-radius: 10px; margin-bottom: 16px; overflow: hidden; display: none; }
+        .firms-header { padding: 10px 16px; font-size: 0.78rem; color: #ff6600; letter-spacing: 2px; text-transform: uppercase; border-bottom: 1px solid #1a3a10; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .firms-header span { display: flex; align-items: center; gap: 8px; }
+        .firms-body { padding: 14px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .firms-desc { font-size: 0.75rem; color: var(--text2); line-height: 1.55; flex: 1; min-width: 200px; }
+        .btn-firms { display: inline-flex; align-items: center; gap: 6px; background: #1a0800; color: #ff6600; border: 1px solid #ff6600; padding: 8px 18px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; text-decoration: none; white-space: nowrap; }
+        .btn-firms:hover { background: #2a1000; }
+        .firms-iframe-wrap { width: 100%; height: 300px; border-top: 1px solid #1a3a10; display: none; }
+        .firms-iframe-wrap iframe { width: 100%; height: 100%; border: none; }
+
+        /* REPORT BOX */
+        .report-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 28px 32px; display: none; }
+        .report-box.visible { display: block; }
+        .report-meta { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+        .report-title { font-size: 1.1rem; font-weight: bold; color: var(--accent); letter-spacing: 1px; }
+        .report-subtitle { font-size: 0.72rem; color: var(--text2); margin-top: 3px; }
+        .report-badge { background: var(--bg3); border: 1px solid var(--border); padding: 4px 12px; border-radius: 20px; font-size: 0.72rem; color: var(--text2); }
+        .report-actions { display: flex; gap: 8px; }
+
+        /* AI CONTENT */
+        .report-content h2 {
+            font-size: 0.8rem; color: var(--accent); letter-spacing: 2px; text-transform: uppercase;
+            margin: 26px 0 12px; padding: 9px 16px;
+            border-left: 4px solid var(--accent);
+            background: linear-gradient(90deg, rgba(0,180,255,0.07) 0%, transparent 100%);
+            border-radius: 0 6px 6px 0;
+        }
+        .report-content h3 {
+            font-size: 0.78rem; color: var(--drone); margin: 16px 0 8px;
+            padding-left: 12px; border-left: 2px solid rgba(255,153,0,0.45);
+        }
+        .report-content p { font-size: 0.82rem; line-height: 1.75; color: var(--text); margin-bottom: 9px; }
+        .report-content ul { padding-left: 20px; margin-bottom: 10px; }
+        .report-content li { font-size: 0.8rem; line-height: 1.65; color: var(--text2); margin-bottom: 4px; }
+        .report-content strong { color: #d0e4f4; }
+        .report-content a { color: #4db8ff; text-decoration: none; border-bottom: 1px dashed rgba(77,184,255,0.35); }
+        .report-content a:hover { border-bottom-color: #4db8ff; }
+        .report-content span.explosion { color: var(--explosion); font-weight: bold; }
+        .report-content span.drone     { color: var(--drone); font-weight: bold; }
+        .report-content span.missile   { color: var(--missile); font-weight: bold; }
+        .report-content span.shot_down { color: var(--shot_down); font-weight: bold; }
+
+        /* CHRONO TABLE — professional design */
+        .chrono-table {
+            width: 100%; border-collapse: separate; border-spacing: 0;
+            margin: 14px 0; font-size: 0.77rem;
+            border: 1px solid rgba(0,180,255,0.15);
+            border-radius: 8px; overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+        }
+        .chrono-table thead { background: linear-gradient(135deg, #0a1f38 0%, #091520 100%); }
+        .chrono-table th {
+            color: var(--accent); font-size: 0.67rem; text-transform: uppercase; letter-spacing: 2px;
+            padding: 11px 14px; text-align: left;
+            border-bottom: 2px solid rgba(0,180,255,0.25);
+            font-weight: 700;
+        }
+        .chrono-table th:first-child  { width: 37%; }
+        .chrono-table th:nth-child(2) { width: 46%; }
+        .chrono-table th:last-child   { width: 17%; white-space: nowrap; }
+        .chrono-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.018); }
+        .chrono-table tbody tr:hover td { background: rgba(0,180,255,0.055); transition: background 0.15s; }
+        .chrono-table td { padding: 11px 14px; border-bottom: 1px solid rgba(30,39,48,0.9); vertical-align: top; }
+        .chrono-table tbody tr:last-child td { border-bottom: none; }
+
+        /* TELEGRAM BUBBLE — authentic look */
+        .tg-bubble {
+            background: linear-gradient(145deg, #0f2035 0%, #0a1825 100%);
+            border: 1px solid rgba(0,140,220,0.2);
+            border-radius: 12px; padding: 10px 13px; max-width: 300px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+        }
+        .tg-photo { max-width: 100%; border-radius: 7px; margin-bottom: 8px; display: block; max-height: 160px; object-fit: cover; cursor: zoom-in; }
+        .tg-text { font-size: 0.77rem; color: #d8e8f4; line-height: 1.58; white-space: pre-wrap; word-break: break-word; }
+        .tg-meta { font-size: 0.63rem; color: #5a7a94; margin-top: 7px; border-top: 1px solid rgba(0,140,220,0.15); padding-top: 5px; }
+        .chrono-analysis { font-size: 0.78rem; color: var(--text); line-height: 1.7; min-width: 200px; }
+        .chrono-src { white-space: nowrap; }
+        .chrono-src a { color: #d580ff; font-size: 0.72rem; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; }
+        .chrono-src a:hover { color: #e8aaff; text-decoration: underline; }
+
+        /* LOADING */
+        .loading { text-align: center; padding: 40px; display: none; }
+        .loading.visible { display: block; }
+        .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { color: var(--text2); font-size: 0.82rem; }
+
+        /* PRINT / PDF */
+        @media print {
+            .header, .config, .report-actions, .btn-firms, .firms-iframe-wrap { display: none !important; }
+            body { background: #fff; color: #000; }
+            .report-box { border: none; padding: 0; background: #fff; }
+            .report-map-section { page-break-after: always; }
+            #report-map { height: 400px !important; }
+            .tg-bubble { background: #f0f6ff; border-color: #c0d4ee; box-shadow: none; }
+            .tg-text, .chrono-analysis { color: #111; }
+            .tg-meta { color: #777; }
+            .report-content h2 { background: #f0f6ff; border-left-color: #0066cc; color: #0055aa; }
+            .report-content h3 { color: #444; border-left-color: #aaa; }
+            .report-content a { color: #0055aa; }
+            .chrono-table { box-shadow: none; border-color: #ccc; }
+            .chrono-table thead { background: #e8f0ff !important; }
+            .chrono-table th { color: #0055aa; border-bottom-color: #99aacc; }
+            .chrono-table td { border-bottom-color: #e0e0e0; color: #111; }
+            .chrono-table tbody tr:nth-child(even) td { background: #f8f8f8; }
+            .firms-section { display: block !important; background: #fff8f0 !important; border-color: #e08020 !important; }
+            .firms-header { color: #cc5500 !important; }
+            .firms-desc { color: #444 !important; }
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <span class="logo">📊 MooN Attacks — Intelligence Report</span>
+    <div class="header-right">
+        <a href="/map" class="btn secondary">🗺️ Map</a>
+        <a href="/feed" target="_blank" class="btn secondary">📰 Feed</a>
+        <button class="btn word" onclick="exportWord()" id="btn-word" style="display:none">📄 Word</button>
+        <button class="btn html" onclick="exportHTML()" id="btn-html" style="display:none">⬇️ HTML</button>
+        <button class="btn pdf"  onclick="window.print()" id="btn-pdf"  style="display:none">🖨️ PDF</button>
+        <button class="btn" onclick="generateReport()">🤖 Generate</button>
+    </div>
+</div>
+
+<div class="config">
+    <div class="config-card">
+        <div class="config-title">⚙️ Report Settings</div>
+        <div class="config-row">
+            <span class="config-label">Period:</span>
+            <input type="datetime-local" id="r-from" class="dt-input">
+            <span style="color:var(--text2);font-size:0.75rem">→</span>
+            <input type="datetime-local" id="r-to" class="dt-input">
+        </div>
+        <div class="config-row">
+            <span class="config-label">Route:</span>
+            <div>
+                <div class="route-input-wrap" style="margin-bottom:8px">
+                    <input type="text" id="route-input" placeholder="Add city..." onkeydown="if(event.key==='Enter') addRouteTag()">
+                    <button class="btn secondary" onclick="addRouteTag()">+ Add</button>
+                </div>
+                <div class="route-tags" id="route-tags"></div>
+            </div>
+        </div>
+        <div class="config-row">
+            <button class="btn" id="btn-generate" onclick="generateReport()" style="padding: 8px 24px; font-size: 0.85rem;">
+                🤖 Generate AI Report
+            </button>
+            <span id="events-preview" style="font-size:0.72rem;color:var(--text2)"></span>
+        </div>
+    </div>
+</div>
+
+<div class="report-wrap">
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Claude is analyzing events and generating report...</div>
+    </div>
+
+    <!-- MINI MAP -->
+    <div class="report-map-section" id="report-map-section">
+        <div class="report-map-header">
+            🗺️ Event Map — Strike locations
+        </div>
+        <div id="report-map"></div>
+        <div class="map-legend-report">
+            <div class="leg-item"><div class="leg-dot" style="background:#ff4444"></div> Explosion</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#ff9900"></div> Drone</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#cc44ff"></div> Missile</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#00ff88"></div> Shot down</div>
+        </div>
+    </div>
+
+    <!-- NASA FIRMS -->
+    <div class="firms-section" id="firms-section">
+        <div class="firms-header">
+            <span>🔥 NASA FIRMS — Тепловые аномалии (спутниковые данные)</span>
+            <button class="btn secondary" style="font-size:0.7rem;padding:4px 10px" onclick="toggleFirmsIframe()">🛰️ Показать карту</button>
+        </div>
+        <div class="firms-body">
+            <div class="firms-desc">
+                Спутниковые данные NASA FIRMS (Fire Information for Resource Management System)
+                фиксируют тепловые аномалии в районе атаки. Нажми кнопку чтобы открыть
+                карту пожаров с точными координатами поражённого объекта.
+            </div>
+            <a id="firms-link" href="#" target="_blank" class="btn-firms">
+                🔥 Открыть NASA FIRMS
+            </a>
+        </div>
+        <div class="firms-iframe-wrap" id="firms-iframe-wrap">
+            <iframe id="firms-iframe" src="" allowfullscreen></iframe>
+        </div>
+    </div>
+
+    <!-- REPORT CONTENT -->
+    <div class="report-box" id="report-box">
+        <div class="report-meta">
+            <div>
+                <div class="report-title">🌙 MooN Attacks — INTELLIGENCE REPORT</div>
+                <div class="report-subtitle" id="report-subtitle"></div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <div class="report-badge" id="report-badge"></div>
+            </div>
+        </div>
+        <div class="report-content" id="report-content"></div>
+    </div>
+</div>
+
+<script>
+    let routeCities = [];
+    let reportMapObj = null;
+    let currentFirmsUrl = null;
+    let currentMapEvents = [];   // сохраняем для экспорта
+
+    const TYPE_COLORS = {
+        explosion: '#ff4444', drone: '#ff9900', missile: '#cc44ff',
+        shot_down: '#00ff88', flyover: '#ffdd00', unknown: '#7a8a99'
+    };
+
+    function addRouteTag() {
+        const inp = document.getElementById('route-input');
+        const val = inp.value.trim();
+        if (!val || routeCities.includes(val)) { inp.value = ''; return; }
+        routeCities.push(val);
+        renderTags();
+        inp.value = '';
+    }
+    function removeTag(city) {
+        routeCities = routeCities.filter(c => c !== city);
+        renderTags();
+    }
+    function renderTags() {
+        document.getElementById('route-tags').innerHTML = routeCities.map(c =>
+            `<span class="route-tag">${c}<button onclick="removeTag('${c}')">×</button></span>`
+        ).join('');
+    }
+
+    function initReportMap(mapEvents) {
+        const section = document.getElementById('report-map-section');
+        section.style.display = 'block';
+
+        if (reportMapObj) {
+            reportMapObj.remove();
+            reportMapObj = null;
+        }
+
+        reportMapObj = L.map('report-map', { zoomControl: true }).setView([47, 37], 6);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© CartoDB', maxZoom: 18
+        }).addTo(reportMapObj);
+
+        const bounds = [];
+        mapEvents.forEach(e => {
+            const color = TYPE_COLORS[e.event_type] || '#7a8a99';
+            const radius = e.event_type === 'explosion' ? 10 : 7;
+            const m = L.circleMarker([e.lat, e.lon], {
+                radius, fillColor: color, color: color,
+                weight: 2, opacity: 0.95, fillOpacity: 0.75
+            });
+            m.bindPopup(`
+                <div style="font-family:monospace;font-size:0.78rem;max-width:240px">
+                    <b style="color:${color}">${e.event_type.toUpperCase()}</b>
+                    ${e.city ? ` — ${e.city}` : ''}<br>
+                    <span style="color:#888">${e.timestamp}</span><br>
+                    <span style="color:#ccc">${e.text}</span>
+                </div>
+            `, { maxWidth: 260 });
+            m.addTo(reportMapObj);
+            bounds.push([e.lat, e.lon]);
+        });
+
+        if (bounds.length > 0) {
+            try { reportMapObj.fitBounds(bounds, { padding: [30, 30] }); } catch(e) {}
+        }
+
+        // Ждём рендер DOM потом обновляем карту
+        setTimeout(() => { if (reportMapObj) reportMapObj.invalidateSize(); }, 200);
+    }
+
+    async function generateReport() {
+        const from = document.getElementById('r-from').value;
+        const to   = document.getElementById('r-to').value;
+        const btn  = document.getElementById('btn-generate');
+
+        btn.disabled = true;
+        document.getElementById('loading').classList.add('visible');
+        document.getElementById('report-box').classList.remove('visible');
+        document.getElementById('report-map-section').style.display = 'none';
+        document.getElementById('firms-section').style.display = 'none';
+        document.getElementById('btn-word').style.display = 'none';
+        document.getElementById('btn-html').style.display = 'none';
+        document.getElementById('btn-pdf').style.display  = 'none';
+
+        try {
+            const res = await fetch('/api/report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    from:  from ? from.replace('T', ' ') : null,
+                    to:    to   ? to.replace('T', ' ')   : null,
+                    route: routeCities,
+                })
+            });
+            const data = await res.json();
+
+            // Заполняем контент
+            document.getElementById('report-content').innerHTML = data.html;
+            document.getElementById('report-subtitle').textContent =
+                `Generated: ${new Date().toLocaleString('ru-RU')}` +
+                (routeCities.length ? ` · Route: ${routeCities.join(' → ')}` : '');
+            document.getElementById('report-badge').textContent = `${data.events_count} events analyzed`;
+            document.getElementById('report-box').classList.add('visible');
+
+            // Инициализируем карту + сохраняем для экспорта
+            currentMapEvents = data.map_events || [];
+            if (currentMapEvents.length > 0) {
+                initReportMap(currentMapEvents);
+            }
+
+            // NASA FIRMS блок
+            if (data.firms_url) {
+                currentFirmsUrl = data.firms_url;
+                const link = document.getElementById('firms-link');
+                link.href = data.firms_url;
+                document.getElementById('firms-section').style.display = 'block';
+                // Сбрасываем iframe если был открыт
+                document.getElementById('firms-iframe-wrap').style.display = 'none';
+                document.getElementById('firms-iframe').src = '';
+            }
+
+            // Показываем кнопки экспорта
+            document.getElementById('btn-word').style.display = '';
+            document.getElementById('btn-html').style.display = '';
+            document.getElementById('btn-pdf').style.display  = '';
+
+        } catch(e) {
+            alert('Error: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            document.getElementById('loading').classList.remove('visible');
+        }
+    }
+
+    // ── Вспомогательные функции для экспорта карты ─────────────────────────
+
+    function calcMapCenter(evts) {
+        if (!evts || !evts.length) return [47.0, 37.0];
+        return [evts.reduce((s,e)=>s+e.lat,0)/evts.length,
+                evts.reduce((s,e)=>s+e.lon,0)/evts.length];
+    }
+    function calcMapZoom(evts) {
+        if (!evts || evts.length <= 1) return 10;
+        const sp = Math.max(
+            Math.max(...evts.map(e=>e.lat)) - Math.min(...evts.map(e=>e.lat)),
+            Math.max(...evts.map(e=>e.lon)) - Math.min(...evts.map(e=>e.lon))
+        );
+        return sp > 15 ? 5 : sp > 8 ? 6 : sp > 4 ? 7 : sp > 2 ? 8 : sp > 1 ? 9 : 10;
+    }
+
+    // Рисует SVG-карту без тайлов (для Word — без зависимости от интернета)
+    function buildMapSVG(evts, W, H) {
+        if (!evts || !evts.length) return '';
+        const lats = evts.map(e=>e.lat), lons = evts.map(e=>e.lon);
+        let mnLa=Math.min(...lats)-0.35, mxLa=Math.max(...lats)+0.35;
+        let mnLo=Math.min(...lons)-0.35, mxLo=Math.max(...lons)+0.35;
+        // Выровнять пропорции
+        const ga=(mxLo-mnLo)/(mxLa-mnLa), sa=W/H;
+        if(ga>sa){ const d=(mxLa-mnLa)/2, c=(mnLa+mxLa)/2; mnLa=c-d*(ga/sa); mxLa=c+d*(ga/sa); }
+        else     { const d=(mxLo-mnLo)/2, c=(mnLo+mxLo)/2; mnLo=c-d*(sa/ga); mxLo=c+d*(sa/ga); }
+        const tx=lo=>((lo-mnLo)/(mxLo-mnLo)*W).toFixed(1);
+        const ty=la=>(H-(la-mnLa)/(mxLa-mnLa)*H).toFixed(1);
+        const clrs={explosion:'#ff4444',drone:'#ff9900',missile:'#cc44ff',shot_down:'#00ff88',flyover:'#ffdd00',unknown:'#7a8a99'};
+        let out='', seen=new Set();
+        evts.forEach(e=>{
+            const c=clrs[e.event_type]||'#7a8a99', r=e.event_type==='explosion'?9:6;
+            const x=parseFloat(tx(e.lon)), y=parseFloat(ty(e.lat));
+            out+=`<circle cx="${x}" cy="${y}" r="${r+3}" fill="${c}" fill-opacity="0.15"/>`;
+            out+=`<circle cx="${x}" cy="${y}" r="${r}" fill="${c}" fill-opacity="0.88" stroke="#fff" stroke-width="0.8"/>`;
+            if(e.city && !seen.has(e.city)){
+                seen.add(e.city);
+                out+=`<text x="${x+r+4}" y="${y+4}" font-size="9.5" fill="#ccddee" font-family="Arial,sans-serif" font-weight="bold">${e.city.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</text>`;
+            }
+        });
+        return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" style="border-radius:8px;display:block">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0c1828"/><stop offset="100%" stop-color="#06101a"/></linearGradient></defs>
+  <rect width="${W}" height="${H}" rx="8" fill="url(#bg)"/>
+  <rect x="1" y="1" width="${W-2}" height="${H-2}" rx="7" fill="none" stroke="#1e3040" stroke-width="1"/>
+  ${out}
+  <text x="8" y="${H-8}" font-size="9" fill="#2a4060" font-family="Arial">MooN Attacks · strike map</text>
+</svg>`;
+    }
+
+    function exportHTML() {
+        const title   = document.getElementById('report-subtitle').textContent;
+        const badge   = document.getElementById('report-badge').textContent;
+        const content = document.getElementById('report-content').innerHTML;
+
+        // ── Интерактивная Leaflet-карта (встроенный JSON + CDN) ─────────────
+        let mapBlock = '';
+        if (currentMapEvents.length) {
+            const [cLat, cLon] = calcMapCenter(currentMapEvents);
+            const zoom = calcMapZoom(currentMapEvents);
+            const evtsJson = JSON.stringify(currentMapEvents);
+            mapBlock = `
+<div style="margin:20px 0">
+  <div style="font-size:11px;color:#0055aa;text-transform:uppercase;letter-spacing:2px;
+              margin-bottom:8px;font-weight:700;border-left:4px solid #0055aa;padding-left:10px">
+    🗺️ КАРТА УДАРОВ — Точки поражений
+  </div>
+  <div id="exp-map" style="height:360px;border:1px solid #c0cce0;border-radius:8px;overflow:hidden"></div>
+  <div style="font-size:10px;color:#888;margin-top:5px;display:flex;gap:14px;flex-wrap:wrap">
+    <span>💥 Взрыв/прилёт</span><span>🚁 БПЛА</span><span>🚀 Ракета</span><span>🛡️ Сбитие</span>
+  </div>
+</div>
+<script>
+(function(){
+  var evts=${evtsJson};
+  var clrs={explosion:'#ff4444',drone:'#ff9900',missile:'#cc44ff',shot_down:'#00ff88',flyover:'#ffdd00',unknown:'#7a8a99'};
+  var m=L.map('exp-map',{zoomControl:true}).setView([${cLat.toFixed(4)},${cLon.toFixed(4)}],${zoom});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© CartoDB',maxZoom:18}).addTo(m);
+  var bounds=[];
+  evts.forEach(function(e){
+    var c=clrs[e.event_type]||'#7a8a99', r=e.event_type==='explosion'?10:7;
+    L.circleMarker([e.lat,e.lon],{radius:r,fillColor:c,color:c,weight:2,opacity:0.95,fillOpacity:0.82})
+     .bindPopup('<b style="color:'+c+'">'+e.event_type.toUpperCase()+'</b>'+(e.city?' — '+e.city:'')+'<br><span style="color:#888">'+e.timestamp+'</span><br>'+e.text.slice(0,120))
+     .addTo(m);
+    bounds.push([e.lat,e.lon]);
+  });
+  if(bounds.length>1){try{m.fitBounds(bounds,{padding:[25,25]});}catch(x){}}
+})();
+<\/script>`;
+        }
+
+        // ── NASA FIRMS ───────────────────────────────────────────────────────
+        const firmsBlock = currentFirmsUrl ? `
+<div style="margin:18px 0;padding:14px 18px;background:#fff8f0;border:2px solid #e08030;border-radius:8px">
+  <strong style="color:#cc4400;font-size:14px">🔥 NASA FIRMS — Тепловые аномалии (спутниковые данные)</strong><br>
+  <a href="${currentFirmsUrl}" target="_blank" style="color:#cc4400;font-size:13px;font-weight:bold;display:inline-block;margin-top:6px">
+    🛰️ Открыть карту пожаров NASA FIRMS →
+  </a>
+  <div style="font-size:11px;color:#888;margin-top:5px">
+    Fire Information for Resource Management System — фиксирует тепловые аномалии (пожары) от ударов.
+  </div>
+</div>` : '';
+
+        const html = `<!DOCTYPE html>
+<html lang="ru"><head><meta charset="UTF-8">
+<title>MooN Attacks Intelligence Report</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"><\/script>
+<style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',Arial,sans-serif;max-width:960px;margin:0 auto;padding:24px;background:#fff;color:#111;line-height:1.6}
+.rpt-header{border-bottom:3px solid #0055aa;padding-bottom:14px;margin-bottom:20px}
+.rpt-title{font-size:22px;font-weight:700;color:#003380;margin:0}
+.rpt-meta{font-size:13px;color:#666;margin-top:6px}
+h2{font-size:13px;color:#0055aa;text-transform:uppercase;letter-spacing:2px;
+   padding:8px 14px;border-left:4px solid #0055aa;background:#f0f6ff;
+   border-radius:0 5px 5px 0;margin:24px 0 12px}
+h3{font-size:12px;color:#444;margin:14px 0 8px;padding-left:10px;border-left:2px solid #aaa}
+p,li{font-size:13px;line-height:1.75;margin-bottom:7px}
+ul{padding-left:20px}
+strong{color:#111;font-weight:600}
+a{color:#0055aa;text-decoration:none}
+a:hover{text-decoration:underline}
+table.chrono-table{width:100%;border-collapse:separate;border-spacing:0;margin:14px 0;
+  border:1px solid #c0cce0;border-radius:8px;overflow:hidden;font-size:12px;box-shadow:0 2px 8px rgba(0,0,60,0.1)}
+table.chrono-table thead{background:linear-gradient(135deg,#1a3a6a 0%,#0d2248 100%)}
+table.chrono-table th{color:#aaccff;font-size:10px;text-transform:uppercase;letter-spacing:2px;
+  padding:10px 12px;text-align:left;border-bottom:2px solid #2a4a7a;font-weight:700}
+table.chrono-table th:first-child{width:36%}
+table.chrono-table th:nth-child(2){width:47%}
+table.chrono-table th:last-child{width:17%;white-space:nowrap}
+table.chrono-table td{padding:10px 12px;border-bottom:1px solid #e4eaf2;vertical-align:top;font-size:12px}
+table.chrono-table tbody tr:nth-child(even) td{background:#f5f8ff}
+table.chrono-table tbody tr:hover td{background:#eaf0ff}
+table.chrono-table tbody tr:last-child td{border-bottom:none}
+.tg-bubble{background:#f0f7ff;border:1px solid #c0d4ee;border-radius:10px;padding:9px 12px;max-width:280px}
+.tg-text{font-size:11.5px;color:#1a1a2e;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.tg-meta{font-size:10px;color:#7a9abc;margin-top:5px;border-top:1px solid #d4e4f4;padding-top:4px}
+.tg-photo{max-width:100%;border-radius:6px;margin-bottom:6px;display:block;max-height:140px;object-fit:cover}
+.chrono-analysis{font-size:12px;color:#1a1a2e;line-height:1.7}
+.chrono-src a{color:#5533aa;font-size:11.5px;font-weight:bold}
+span.explosion{color:#cc2200;font-weight:bold}
+span.drone    {color:#cc7700;font-weight:bold}
+span.missile  {color:#7700cc;font-weight:bold}
+span.shot_down{color:#007755;font-weight:bold}
+</style></head><body>
+<div class="rpt-header">
+  <div class="rpt-title">🗺️ MooN Attacks — INTELLIGENCE REPORT</div>
+  <div class="rpt-meta"><strong>${title}</strong> &nbsp;|&nbsp; ${badge}</div>
+</div>
+${mapBlock}
+${firmsBlock}
+${content}
+<hr style="margin-top:30px;border:none;border-top:1px solid #ddd">
+<p style="font-size:11px;color:#aaa;text-align:center">Generated by MooN Attacks Intelligence Platform · ${new Date().toLocaleString('ru-RU')}</p>
+</body></html>`;
+
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url;
+        a.download = `moon_attacks_report_${Date.now()}.html`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function toggleFirmsIframe() {
+        const wrap = document.getElementById('firms-iframe-wrap');
+        const iframe = document.getElementById('firms-iframe');
+        if (wrap.style.display === 'block') {
+            wrap.style.display = 'none';
+            iframe.src = '';
+        } else {
+            wrap.style.display = 'block';
+            // NASA FIRMS может блокировать iframe — открываем в новой вкладке как запасной вариант
+            iframe.src = currentFirmsUrl || '';
+            iframe.onerror = () => {
+                wrap.style.display = 'none';
+                if (currentFirmsUrl) window.open(currentFirmsUrl, '_blank');
+            };
+            // Таймаут: если за 3 сек не загрузилось — открываем в новой вкладке
+            setTimeout(() => {
+                try {
+                    const doc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (!doc || doc.readyState !== 'complete') {
+                        wrap.style.display = 'none';
+                        if (currentFirmsUrl) window.open(currentFirmsUrl, '_blank');
+                    }
+                } catch(e) {
+                    // cross-origin — значит загружается нормально
+                }
+            }, 3000);
+        }
+    }
+
+    function exportWord() {
+        const title   = document.getElementById('report-subtitle').textContent;
+        const badge   = document.getElementById('report-badge').textContent;
+        const content = document.getElementById('report-content').innerHTML;
+
+        // ── SVG-карта (статика, без тайлов — работает в Word без интернета) ──
+        const mapSvg  = currentMapEvents.length ? buildMapSVG(currentMapEvents, 560, 260) : '';
+        const mapWordBlock = mapSvg ? `
+<div style="margin:14pt 0">
+  <p style="font-size:12pt;font-weight:bold;color:#003388;margin-bottom:6pt;
+     border-left:4pt solid #0044bb;padding-left:8pt">🗺️ КАРТА УДАРОВ — Точки поражений</p>
+  ${mapSvg}
+  <p style="font-size:8.5pt;color:#888;margin-top:4pt">
+    💥 красный — взрыв/прилёт &nbsp;|&nbsp; 🟡 оранжевый — БПЛА &nbsp;|&nbsp;
+    🟣 фиолетовый — ракета &nbsp;|&nbsp; 🟢 зелёный — сбитие
+  </p>
+</div>` : '';
+
+        // ── NASA FIRMS ────────────────────────────────────────────────────────
+        const firmsWordBlock = currentFirmsUrl ? `
+<div style="margin:14pt 0;padding:10pt;background:#fff8f0;border:2pt solid #cc6600">
+  <p style="margin:0;font-size:12pt;font-weight:bold;color:#993300">🔥 NASA FIRMS — Тепловые аномалии</p>
+  <p style="margin:4pt 0 0;font-size:10pt">
+    Карта пожаров: <a href="${currentFirmsUrl}" style="color:#993300">${currentFirmsUrl}</a>
+  </p>
+  <p style="margin:4pt 0 0;font-size:9pt;color:#888">Fire Information for Resource Management System — спутниковые данные о тепловых аномалиях</p>
+</div>` : '';
+
+        const wordHtml = `
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="UTF-8">
+<title>MooN Attacks Intelligence Report</title>
+<!--[if gte mso 9]><xml>
+ <w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument>
+</xml><![endif]-->
+<style>
+ @page { margin: 2cm; }
+ body { font-family: Arial, sans-serif; font-size: 11pt; color: #111; }
+ h1 { font-size: 17pt; color: #002255; border-bottom: 2.5pt solid #0044bb; padding-bottom: 5pt; margin-bottom: 8pt; }
+ h2 { font-size: 12pt; color: #003388; background: #eef4ff; padding: 5pt 10pt;
+      border-left: 4pt solid #0044bb; margin-top: 18pt; margin-bottom: 8pt; }
+ h3 { font-size: 10.5pt; color: #333; margin-top: 12pt; margin-bottom: 6pt; border-left: 2pt solid #aaa; padding-left: 8pt; }
+ p, li { font-size: 10.5pt; line-height: 1.65; margin-bottom: 5pt; }
+ strong { color: #111; font-weight: bold; }
+ a { color: #0055cc; }
+ table { width: 100%; border-collapse: collapse; margin: 10pt 0; font-size: 9.5pt; }
+ th { background: #1a3a70; color: #aaccff; font-size: 8.5pt; padding: 7pt 9pt;
+      text-align: left; border: 1pt solid #2a4a80; text-transform: uppercase; letter-spacing: 1pt; }
+ td { padding: 7pt 9pt; border: 1pt solid #d0d8e8; vertical-align: top; }
+ tr:nth-child(even) td { background: #f5f8ff; }
+ .tg-bubble { background: #eef5ff; border: 1pt solid #c0d4ee; padding: 7pt; font-size: 9pt; }
+ .tg-text { color: #111; line-height: 1.55; }
+ .tg-meta { color: #778899; font-size: 8pt; margin-top: 4pt; border-top: 0.5pt solid #c0d0e0; padding-top: 4pt; }
+ .chrono-analysis { font-size: 10pt; color: #111; }
+ .chrono-src a { color: #6622aa; font-weight: bold; }
+ span.explosion { color: #cc2200; font-weight: bold; }
+ span.drone     { color: #cc7700; font-weight: bold; }
+ span.missile   { color: #7700cc; font-weight: bold; }
+ span.shot_down { color: #006644; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>🗺️ MooN Attacks — INTELLIGENCE REPORT</h1>
+<p><strong>${title}</strong>&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;<em>${badge}</em></p>
+<p style="color:#888;font-size:9pt">Сгенерировано: ${new Date().toLocaleString('ru-RU')}</p>
+${mapWordBlock}
+${firmsWordBlock}
+<hr style="border:none;border-top:1pt solid #ccc;margin:12pt 0">
+${content}
+<hr style="border:none;border-top:1pt solid #ccc;margin-top:20pt">
+<p style="color:#aaa;font-size:8.5pt;text-align:center">MooN Attacks Intelligence Platform — автоматический анализ открытых источников</p>
+</body>
+</html>`;
+
+        const blob = new Blob(['﻿' + wordHtml],
+            { type: 'application/msword;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a   = document.createElement('a');
+        a.href = url;
+        a.download = `moon_attacks_report_${Date.now()}.doc`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // Pre-fill time — last 24h
+    const now = new Date();
+    const yesterday = new Date(now - 24 * 60 * 60 * 1000);
+    const fmt = d => d.toISOString().slice(0, 16);
+    document.getElementById('r-from').value = fmt(yesterday);
+    document.getElementById('r-to').value   = fmt(now);
+</script>
+</body>
+</html>

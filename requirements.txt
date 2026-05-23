@@ -1,0 +1,10 @@
+﻿flask
+flask-socketio
+telethon
+eventlet
+aiohttp
+requests
+python-dotenv
+peewee
+anthropic
+beautifulsoup4

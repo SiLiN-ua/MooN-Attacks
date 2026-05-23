@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MooN Attacks — Live Feed</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0c10; --bg2: #0f1318; --bg3: #141920;
+            --border: #1e2730; --accent: #00b4ff; --text: #e0e6ed; --text2: #7a8a99;
+            --explosion: #ff4444; --drone: #ff9900; --missile: #cc44ff;
+            --shot_down: #00ff88; --flyover: #ffdd00; --unknown: #7a8a99;
+        }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* HEADER */
+        .header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 16px; background: var(--bg2); border-bottom: 1px solid var(--border);
+            height: 50px; flex-shrink: 0; gap: 12px;
+        }
+        .logo { font-size: 1rem; font-weight: bold; color: var(--accent); letter-spacing: 2px; }
+        .header-right { display: flex; align-items: center; gap: 10px; }
+        .status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--shot_down); box-shadow: 0 0 8px var(--shot_down); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        .live-label { font-size: 0.75rem; color: var(--shot_down); font-weight: bold; }
+        .count-badge { background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; font-size: 0.75rem; color: var(--text2); }
+        .btn-map { background: var(--accent); color: #000; border: none; padding: 5px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.78rem; text-decoration: none; }
+
+        /* FILTERS */
+        .filters {
+            display: flex; gap: 6px; padding: 8px 16px; background: var(--bg2);
+            border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
+        }
+        .f-btn {
+            background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+            padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+        .f-btn:hover { border-color: var(--accent); color: var(--text); }
+        .f-btn.active { background: rgba(0,180,255,0.15); border-color: var(--accent); color: var(--accent); font-weight: bold; }
+        .f-btn.explosion.active { background: rgba(255,68,68,0.15); border-color: var(--explosion); color: var(--explosion); }
+        .f-btn.drone.active    { background: rgba(255,153,0,0.15); border-color: var(--drone); color: var(--drone); }
+        .f-btn.missile.active  { background: rgba(204,68,255,0.15); border-color: var(--missile); color: var(--missile); }
+        .f-btn.shot_down.active{ background: rgba(0,255,136,0.15); border-color: var(--shot_down); color: var(--shot_down); }
+        .f-btn.flyover.active  { background: rgba(255,221,0,0.15); border-color: var(--flyover); color: var(--flyover); }
+        .search-input {
+            background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+            padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; outline: none; width: 180px;
+        }
+        .search-input:focus { border-color: var(--accent); }
+        .auto-scroll-toggle {
+            margin-left: auto; display: flex; align-items: center; gap: 6px;
+            font-size: 0.73rem; color: var(--text2); cursor: pointer;
+        }
+
+        /* FEED */
+        .feed { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+
+        .post {
+            background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+            padding: 12px 14px; border-left: 4px solid var(--unknown);
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        .post.explosion { border-left-color: var(--explosion); }
+        .post.drone     { border-left-color: var(--drone); }
+        .post.missile   { border-left-color: var(--missile); }
+        .post.shot_down { border-left-color: var(--shot_down); }
+        .post.flyover   { border-left-color: var(--flyover); }
+
+        .post-header { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; flex-wrap: wrap; }
+        .post-type { font-size: 0.68rem; font-weight: bold; text-transform: uppercase; padding: 2px 8px; border-radius: 10px; background: rgba(255,255,255,0.05); }
+        .post-type.explosion { color: var(--explosion); }
+        .post-type.drone     { color: var(--drone); }
+        .post-type.missile   { color: var(--missile); }
+        .post-type.shot_down { color: var(--shot_down); }
+        .post-type.flyover   { color: var(--flyover); }
+        .post-type.unknown   { color: var(--unknown); }
+        .post-city { font-size: 0.75rem; color: var(--accent); }
+        .post-time { font-size: 0.68rem; color: var(--text2); margin-left: auto; }
+
+        .post-text { font-size: 0.85rem; line-height: 1.65; color: var(--text); white-space: pre-wrap; word-break: break-word; }
+
+        .post-footer { margin-top: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .post-channel { font-size: 0.7rem; color: var(--text2); }
+        .post-channel a { color: var(--accent); text-decoration: none; }
+        .post-channel a:hover { text-decoration: underline; }
+        .post-media a { font-size: 0.7rem; color: var(--drone); text-decoration: none; }
+        .post-media a:hover { text-decoration: underline; }
+        .post-photo { max-width: 100%; max-height: 240px; border-radius: 6px; margin: 6px 0; display: block; cursor: zoom-in; object-fit: cover; }
+        .post-tglink { font-size: 0.7rem; color: #cc44ff; text-decoration: none; font-weight: bold; }
+        .post-tglink:hover { text-decoration: underline; }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <span class="logo">📰 MooN Attacks — Live Feed</span>
+    <div class="header-right">
+        <span class="status-dot"></span>
+        <span class="live-label">LIVE</span>
+        <span class="count-badge" id="total-count">0 posts</span>
+        <a href="/map" class="btn-map">🗺️ Map</a>
+        <a href="/report" target="_blank" class="btn-map" style="background:#1a1040;border:1px solid #a855f7;color:#a855f7">📊 Report</a>
+        <button onclick="exportFeedWord()" class="btn-map" style="background:#001a30;color:#2b7cd3;border:1px solid #2b7cd3">📄 Word</button>
+        <button onclick="exportFeedPDF()"  class="btn-map" style="background:#1a1040;color:#a855f7;border:1px solid #a855f7">🖨️ PDF</button>
+    </div>
+</div>
+
+<div class="filters">
+    <button class="f-btn active" data-type="all" onclick="setFilter('all', this)">All</button>
+    <button class="f-btn explosion" data-type="explosion" onclick="setFilter('explosion', this)">💥 Explosion</button>
+    <button class="f-btn drone" data-type="drone" onclick="setFilter('drone', this)">🚁 Drone</button>
+    <button class="f-btn missile" data-type="missile" onclick="setFilter('missile', this)">🚀 Missile</button>
+    <button class="f-btn shot_down" data-type="shot_down" onclick="setFilter('shot_down', this)">🛡️ Shot down</button>
+    <button class="f-btn flyover" data-type="flyover" onclick="setFilter('flyover', this)">👁️ Flyover</button>
+    <input type="text" class="search-input" placeholder="🔍 Search city or text..." oninput="setSearch(this.value)">
+    <label class="auto-scroll-toggle">
+        <input type="checkbox" id="auto-scroll" checked> Auto-scroll
+    </label>
+</div>
+
+<div class="feed" id="feed"></div>
+
+<script>
+    const ICONS = { explosion:'💥', drone:'🚁', missile:'🚀', shot_down:'🛡️', flyover:'👁️', unknown:'❓' };
+    let allPosts = [];
+    let lastId = 0;
+    let currentFilter = 'all';
+    let currentSearch = '';
+
+    function setFilter(type, btn) {
+        currentFilter = type;
+        document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderFeed();
+    }
+
+    function setSearch(val) {
+        currentSearch = val.toLowerCase();
+        renderFeed();
+    }
+
+    function matches(post) {
+        if (currentFilter !== 'all' && post.event_type !== currentFilter) return false;
+        if (currentSearch) {
+            const haystack = ((post.text || '') + (post.city || '') + (post.channel_name || '')).toLowerCase();
+            if (!haystack.includes(currentSearch)) return false;
+        }
+        return true;
+    }
+
+    function makePost(p) {
+        const slug = (p.channel_url || '').replace('https://t.me/', '').replace(/\//g, '');
+        const tgLink = p.message_id
+            ? `https://t.me/${slug}/${p.message_id}`
+            : (p.channel_url || '#');
+        const mediaHtml = p.media_url
+            ? (p.media_url.startsWith('/static/')
+                ? `<img src="${p.media_url}" class="post-photo" onclick="window.open('${p.media_url}','_blank')">`
+                : `<span class="post-media"><a href="${p.media_url}" target="_blank">📎 Media / Video</a></span>`)
+            : '';
+        return `
+        <div class="post ${p.event_type}" id="post-${p.id}">
+            <div class="post-header">
+                <span class="post-type ${p.event_type}">${ICONS[p.event_type]||'❓'} ${p.event_type}</span>
+                ${p.city ? `<span class="post-city">📍 ${p.city}</span>` : ''}
+                <span class="post-time">🕐 ${p.timestamp}</span>
+            </div>
+            <div class="post-text">${escHtml(p.text)}</div>
+            ${mediaHtml}
+            <div class="post-footer">
+                <span class="post-channel">📡 <a href="/channel/${slug}" target="_blank">${p.channel_name}</a></span>
+                <a href="${tgLink}" target="_blank" class="post-tglink">🔗 Telegram</a>
+            </div>
+        </div>`;
+    }
+
+    function escHtml(s) {
+        return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function renderFeed() {
+        const feed = document.getElementById('feed');
+        const filtered = allPosts.filter(matches).slice().reverse(); // старые сверху, новые снизу
+        feed.innerHTML = filtered.map(makePost).join('');
+        document.getElementById('total-count').textContent = `${filtered.length} posts`;
+    }
+
+    async function loadInitial() {
+        const feedEl = document.getElementById('feed');
+        feedEl.innerHTML = '<div style="color:var(--text2);text-align:center;padding:60px;font-size:0.85rem">⏳ Загрузка событий...</div>';
+        try {
+            const res = await fetch('/api/events?limit=500');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            allPosts = await res.json();
+            if (allPosts.length) lastId = Math.max(...allPosts.map(e => e.id));
+            renderFeed();
+            if (!allPosts.length) {
+                feedEl.innerHTML = '<div style="color:var(--text2);text-align:center;padding:60px;font-size:0.85rem">📭 События не найдены.<br><small>Загрузи историю через карту (History → Load from Telegram)</small></div>';
+            }
+        } catch(e) {
+            feedEl.innerHTML = `<div style="color:#ff4444;text-align:center;padding:60px;font-size:0.85rem">⚠️ Ошибка загрузки: ${e.message}<br><small style="color:var(--text2);margin-top:8px;display:block">Убедись что сервер запущен на порту 5001</small></div>`;
+        }
+    }
+
+    async function poll() {
+        try {
+            const res = await fetch(`/api/events/new?since=${lastId}`);
+            const newPosts = await res.json();
+            if (newPosts.length) {
+                newPosts.forEach(p => {
+                    if (!allPosts.find(e => e.id === p.id)) allPosts.unshift(p);
+                });
+                lastId = Math.max(...newPosts.map(e => e.id));
+                renderFeed();
+                // Auto-scroll вниз (нові знизу)
+                if (document.getElementById('auto-scroll').checked) {
+                    const feedEl = document.getElementById('feed');
+                    feedEl.scrollTop = feedEl.scrollHeight;
+                }
+            }
+        } catch(e) {}
+    }
+
+    // ── Общий HTML для экспорта ────────────────────────────────────────────
+    function buildExportRows() {
+        const filtered = allPosts.filter(matches).slice().reverse(); // старые сверху, как в Feed
+        const TYPE_COLORS = {
+            explosion:'#cc2200', drone:'#cc7700', missile:'#7700cc',
+            shot_down:'#006644', flyover:'#aa8800', unknown:'#555'
+        };
+        return filtered.map(p => {
+            const slug = (p.channel_url || '').replace('https://t.me/', '').replace(/\//g, '');
+            const tgLink = p.message_id
+                ? `https://t.me/${slug}/${p.message_id}`
+                : (p.channel_url || '#');
+            const color = TYPE_COLORS[p.event_type] || '#555';
+            const icon  = ICONS[p.event_type] || '❓';
+            const city  = p.city ? `📍 ${p.city}` : '';
+            const text  = (p.text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            return `
+<tr>
+  <td style="white-space:nowrap;color:#888;font-size:10pt">${p.timestamp || ''}</td>
+  <td style="white-space:nowrap"><span style="color:${color};font-weight:bold;font-size:10pt">${icon} ${p.event_type}</span></td>
+  <td style="white-space:nowrap;color:#0055aa;font-size:10pt">${city}</td>
+  <td style="font-size:10pt;line-height:1.5">${text}</td>
+  <td style="white-space:nowrap;font-size:10pt">
+    <a href="${tgLink}" style="color:#6622aa;font-weight:bold;text-decoration:none">🔗 Telegram</a><br>
+    <a href="${p.channel_url||'#'}" style="color:#0055aa;font-size:9pt;text-decoration:none">📡 ${p.channel_name||''}</a>
+  </td>
+</tr>`;
+        }).join('');
+    }
+
+    function buildExportHTML(forWord) {
+        const count = allPosts.filter(matches).length;
+        const now = new Date().toLocaleString('ru-RU');
+        const filterLabel = currentFilter !== 'all' ? ` · Фильтр: ${currentFilter}` : '';
+        const searchLabel = currentSearch ? ` · Поиск: "${currentSearch}"` : '';
+        const rows = buildExportRows();
+
+        const wordNS = forWord ? `xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40"` : '';
+
+        return `<!DOCTYPE html>
+<html ${wordNS}>
+<head>
+<meta charset="UTF-8">
+<title>MooN Attacks — Feed Export</title>
+${forWord ? `<!--[if gte mso 9]><xml>
+ <w:WordDocument><w:View>Print</w:View><w:Zoom>90</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument>
+</xml><![endif]-->` : ''}
+<style>
+  @page { margin: 1.5cm; }
+  body { font-family: Arial, sans-serif; font-size: 10pt; color: #111; }
+  h1 { font-size: 15pt; color: #002255; border-bottom: 2pt solid #0044bb; padding-bottom: 6pt; margin-bottom: 4pt; }
+  .meta { font-size: 9pt; color: #666; margin-bottom: 12pt; }
+  table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+  th { background: #1a3a70; color: #aaccff; font-size: 8.5pt; padding: 7pt 8pt;
+       text-align: left; border: 1pt solid #2a4a80; text-transform: uppercase; letter-spacing: 0.5pt; }
+  td { padding: 6pt 8pt; border: 1pt solid #d8e0ec; vertical-align: top; }
+  tr:nth-child(even) td { background: #f5f8ff; }
+  a { color: #0044cc; text-decoration: none; }
+  .footer { margin-top: 14pt; font-size: 8pt; color: #aaa; text-align: center; border-top: 0.5pt solid #ddd; padding-top: 6pt; }
+</style>
+</head>
+<body>
+<h1>🌙 MooN Attacks — Live Feed Export</h1>
+<div class="meta">
+  Экспорт: ${now}${filterLabel}${searchLabel} &nbsp;|&nbsp; <strong>${count} событий</strong>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th style="width:12%">Время</th>
+      <th style="width:11%">Тип</th>
+      <th style="width:10%">Город</th>
+      <th style="width:47%">Сообщение</th>
+      <th style="width:20%">Источник</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rows}
+  </tbody>
+</table>
+<div class="footer">MooN Attacks Intelligence Platform · ${now}</div>
+</body>
+</html>`;
+    }
+
+    function exportFeedWord() {
+        const html = buildExportHTML(true);
+        const blob = new Blob(['﻿' + html], { type: 'application/msword;charset=utf-8' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url;
+        a.download = `moon_attacks_feed_${Date.now()}.doc`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function exportFeedPDF() {
+        const html = buildExportHTML(false);
+        const win  = window.open('', '_blank');
+        win.document.write(html);
+        win.document.close();
+        win.onload = () => { win.focus(); win.print(); };
+    }
+
+    loadInitial();
+    setInterval(poll, 3000);
+</script>
+</body>
+</html>

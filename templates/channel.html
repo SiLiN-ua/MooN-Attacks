@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ channel_name }} — MooN Attacks</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0c10; --bg2: #0f1318; --bg3: #141920;
+            --border: #1e2730; --accent: #00b4ff; --text: #e0e6ed; --text2: #7a8a99;
+            --explosion: #ff4444; --drone: #ff9900; --missile: #cc44ff;
+            --shot_down: #00ff88; --flyover: #ffdd00; --unknown: #7a8a99;
+        }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', monospace; min-height: 100vh; }
+
+        .header {
+            position: sticky; top: 0; z-index: 100;
+            background: var(--bg2); border-bottom: 1px solid var(--border);
+            padding: 12px 24px; display: flex; align-items: center; gap: 16px;
+        }
+        .back-btn {
+            background: none; border: 1px solid var(--border); color: var(--text2);
+            padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82rem;
+            text-decoration: none;
+        }
+        .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .ch-title { font-size: 1.1rem; font-weight: bold; color: var(--accent); }
+        .ch-link { font-size: 0.78rem; color: var(--text2); }
+        .ch-link a { color: var(--text2); text-decoration: none; }
+        .ch-link a:hover { color: var(--accent); }
+        .ch-count { margin-left: auto; font-size: 0.78rem; color: var(--text2); }
+
+        .feed { max-width: 860px; margin: 0 auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+        .post {
+            background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+            padding: 14px 16px; border-left: 4px solid var(--unknown);
+        }
+        .post.explosion { border-left-color: var(--explosion); }
+        .post.drone     { border-left-color: var(--drone); }
+        .post.missile   { border-left-color: var(--missile); }
+        .post.shot_down { border-left-color: var(--shot_down); }
+        .post.flyover   { border-left-color: var(--flyover); }
+
+        .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+        .post-type {
+            font-size: 0.7rem; font-weight: bold; text-transform: uppercase;
+            padding: 2px 8px; border-radius: 10px; background: rgba(255,255,255,0.06);
+        }
+        .post-type.explosion { color: var(--explosion); }
+        .post-type.drone     { color: var(--drone); }
+        .post-type.missile   { color: var(--missile); }
+        .post-type.shot_down { color: var(--shot_down); }
+        .post-type.flyover   { color: var(--flyover); }
+        .post-type.unknown   { color: var(--unknown); }
+
+        .post-city { font-size: 0.78rem; color: var(--accent); }
+        .post-time { font-size: 0.72rem; color: var(--text2); margin-left: auto; }
+
+        .post-text {
+            font-size: 0.88rem; line-height: 1.7; color: var(--text);
+            white-space: pre-wrap; word-break: break-word;
+        }
+
+        .post-media {
+            margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;
+        }
+        .media-link {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: var(--bg3); border: 1px solid var(--border);
+            color: var(--accent); text-decoration: none; padding: 4px 10px;
+            border-radius: 6px; font-size: 0.78rem;
+        }
+        .media-link:hover { border-color: var(--accent); }
+
+        .post-footer {
+            margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .tg-link {
+            font-size: 0.72rem; color: var(--text2); text-decoration: none;
+        }
+        .tg-link:hover { color: var(--accent); }
+
+        .empty { text-align: center; padding: 60px; color: var(--text2); font-size: 1rem; }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <a href="javascript:window.close()" class="back-btn">✕ Close</a>
+    <div>
+        <div class="ch-title">📡 {{ channel_name }}</div>
+        <div class="ch-link"><a href="{{ channel_url }}" target="_blank">{{ channel_url }}</a></div>
+    </div>
+    <div class="ch-count">{{ events|length }} posts</div>
+</div>
+
+<div class="feed">
+    {% if events %}
+        {% for e in events %}
+        <div class="post {{ e.event_type }}">
+            <div class="post-header">
+                <span class="post-type {{ e.event_type }}">
+                    {% if e.event_type == 'explosion' %}💥
+                    {% elif e.event_type == 'drone' %}🚁
+                    {% elif e.event_type == 'missile' %}🚀
+                    {% elif e.event_type == 'shot_down' %}🛡️
+                    {% elif e.event_type == 'flyover' %}👁️
+                    {% else %}❓{% endif %}
+                    {{ e.event_type }}
+                </span>
+                {% if e.city %}
+                <span class="post-city">📍 {{ e.city }}</span>
+                {% endif %}
+                <span class="post-time">🕐 {{ e.timestamp.strftime('%Y-%m-%d %H:%M') }}</span>
+            </div>
+
+            <div class="post-text">{{ e.text }}</div>
+
+            {% if e.media_url %}
+            <div class="post-media">
+                <a href="{{ e.media_url }}" target="_blank" class="media-link">
+                    📎 Open media
+                </a>
+            </div>
+            {% endif %}
+
+            <div class="post-footer">
+                <a href="{{ channel_url }}" target="_blank" class="tg-link">
+                    📡 {{ channel_name }}
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty">
+            <div style="font-size:2rem;margin-bottom:12px">📭</div>
+            No posts from this channel yet.<br>
+            <small>Start monitoring to collect messages.</small>
+        </div>
+    {% endif %}
+</div>
+
+</body>
+</html>

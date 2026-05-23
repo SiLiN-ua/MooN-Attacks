@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MooN Attacks</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#000; overflow:hidden; width:100vw; height:100vh; font-family:'Segoe UI',sans-serif; }
+
+        #bg { position:fixed; inset:0; z-index:0; }
+
+        .scanlines {
+            position:fixed; inset:0; z-index:1; pointer-events:none;
+            background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.05) 2px,rgba(0,0,0,0.05) 4px);
+        }
+
+        #globe-wrap {
+            position:fixed; top:50%; left:50%;
+            transform:translate(-50%,-50%);
+            z-index:2;
+        }
+
+        #logo {
+            position:fixed; top:42px; left:50%;
+            transform:translateX(-50%);
+            text-align:center; z-index:10; pointer-events:none;
+        }
+        .logo-main {
+            font-size:4rem; font-weight:900; letter-spacing:10px; line-height:1;
+            animation:lglow 3s ease-in-out infinite;
+        }
+        .lm { color:#fff; }
+        .lo { color:#00b4ff; text-shadow:0 0 20px #00b4ff,0 0 50px #0088cc; }
+        .la {
+            display:block; font-size:0.95rem; letter-spacing:20px;
+            color:rgba(0,180,255,0.45); margin-top:5px; font-weight:300;
+        }
+        .ls { font-size:0.6rem; letter-spacing:5px; color:rgba(255,255,255,0.18); margin-top:8px; text-transform:uppercase; display:block; }
+        @keyframes lglow {
+            0%,100%{text-shadow:0 0 30px rgba(0,180,255,.5);}
+            50%{text-shadow:0 0 80px rgba(0,180,255,1),0 0 130px rgba(0,180,255,.3);}
+        }
+
+        #enter-btn {
+            position:fixed; bottom:60px; left:50%;
+            transform:translateX(-50%);
+            z-index:10;
+            background:rgba(50,53,60,.78);
+            border:1px solid rgba(120,125,135,.4);
+            color:rgba(210,215,220,.9);
+            padding:18px 56px; border-radius:50px;
+            font-size:0.83rem; letter-spacing:4px;
+            text-transform:uppercase; text-decoration:none;
+            backdrop-filter:blur(16px);
+            transition:all .3s ease;
+            white-space:nowrap; font-family:inherit;
+            animation:bpulse 2.6s ease-in-out infinite;
+        }
+        #enter-btn:hover {
+            background:rgba(0,90,160,.35);
+            border-color:rgba(0,180,255,.7);
+            color:#fff;
+            box-shadow:0 0 40px rgba(0,180,255,.4),0 0 80px rgba(0,180,255,.15);
+            transform:translateX(-50%) scale(1.05);
+        }
+        @keyframes bpulse {
+            0%,100%{box-shadow:0 0 10px rgba(100,105,115,.2);}
+            50%{box-shadow:0 0 24px rgba(100,105,115,.45);}
+        }
+
+        #status {
+            position:fixed; bottom:24px; left:50%;
+            transform:translateX(-50%);
+            font-size:0.58rem; letter-spacing:3px;
+            color:rgba(255,255,255,.18);
+            text-transform:uppercase; z-index:10;
+        }
+        .sdot {
+            display:inline-block; width:6px; height:6px;
+            border-radius:50%; background:#00ff88;
+            box-shadow:0 0 8px #00ff88; margin-right:6px;
+            animation:sp 1.2s ease-in-out infinite; vertical-align:middle;
+        }
+        @keyframes sp{0%,100%{opacity:1}50%{opacity:.25}}
+    </style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+<div class="scanlines"></div>
+
+<div id="globe-wrap"></div>
+
+<div id="logo">
+    <div class="logo-main">
+        <span class="lm">Mo</span><span class="lo">o</span><span class="lm">N</span>
+    </div>
+    <span class="la">A T T A C K S</span>
+    <span class="ls">Real-time military threat intelligence</span>
+</div>
+
+<a href="/map" id="enter-btn">🛰 &nbsp; Monitoring Attacks on Russia</a>
+<div id="status"><span class="sdot"></span>System online</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script>
+// ═══ BACKGROUND: STARS + NEBULA ═══
+const bg = document.getElementById('bg');
+const bx = bg.getContext('2d');
+
+function rsz() { bg.width = innerWidth; bg.height = innerHeight; }
+rsz(); addEventListener('resize', rsz);
+
+const STARS = Array.from({length:700}, () => ({
+    x: Math.random()*innerWidth,
+    y: Math.random()*innerHeight,
+    r: Math.random()*1.6+.2,
+    a: Math.random(),
+    d: (Math.random()*.012+.003) * (Math.random()>.5?1:-1),
+    c: Math.random()>.92 ? '#c8e8ff' : Math.random()>.82 ? '#fff8e8' : Math.random()>.96 ? '#ffcccc' : '#ffffff',
+}));
+const SHOOTS = [];
+
+function drawBg() {
+    bx.clearRect(0,0,bg.width,bg.height);
+
+    // Very subtle nebula glow
+    const cx = bg.width/2, cy = bg.height/2;
+    const ng1 = bx.createRadialGradient(cx,cy,0,cx,cy,260);
+    ng1.addColorStop(0,'rgba(10,15,30,.14)');
+    ng1.addColorStop(.6,'rgba(5,8,18,.06)');
+    ng1.addColorStop(1,'transparent');
+    bx.fillStyle = ng1; bx.fillRect(0,0,bg.width,bg.height);
+
+    // Stars
+    STARS.forEach(s=>{
+        s.a += s.d;
+        if(s.a>=1||s.a<=0) s.d*=-1;
+        bx.globalAlpha = Math.max(0,Math.min(1,s.a));
+        bx.fillStyle = s.c;
+        bx.beginPath(); bx.arc(s.x,s.y,s.r,0,Math.PI*2); bx.fill();
+    });
+
+    // Shooting stars
+    if(SHOOTS.length<2 && Math.random()<.004) {
+        SHOOTS.push({x:Math.random()*bg.width*.7, y:Math.random()*bg.height*.3,
+            l:55+Math.random()*80, sp:8+Math.random()*8, a:1});
+    }
+    SHOOTS.forEach(s=>{
+        bx.globalAlpha = s.a;
+        const g = bx.createLinearGradient(s.x,s.y,s.x+s.l,s.y+s.l*.45);
+        g.addColorStop(0,'transparent'); g.addColorStop(1,'rgba(255,255,255,.9)');
+        bx.strokeStyle = g; bx.lineWidth = 1.2;
+        bx.beginPath(); bx.moveTo(s.x,s.y); bx.lineTo(s.x+s.l,s.y+s.l*.45); bx.stroke();
+        s.x+=s.sp*1.7; s.y+=s.sp*.42; s.a-=.022;
+    });
+    for(let i=SHOOTS.length-1;i>=0;i--) if(SHOOTS[i].a<=0) SHOOTS.splice(i,1);
+
+    bx.globalAlpha = 1;
+    requestAnimationFrame(drawBg);
+}
+drawBg();
+
+// ═══ THREE.JS MOON ═══
+const GS = Math.min(innerWidth*.44, 420);
+const wrap = document.getElementById('globe-wrap');
+
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+renderer.setSize(GS,GS);
+renderer.setPixelRatio(devicePixelRatio);
+wrap.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38,1,.1,100);
+camera.position.z = 3.1;
+
+// ── Освещение (лунное: боковое солнце + слабый отсвет Земли) ────────────
+scene.add(new THREE.AmbientLight(0x0a0a0e, 0.7));             // почти чёрный ambient
+const sun = new THREE.DirectionalLight(0xfff4e0, 2.4);        // солнце сбоку-слева
+sun.position.set(-3.2, 1.0, 0.5); scene.add(sun);
+const earthshine = new THREE.DirectionalLight(0x1a2840, 0.35);// слабый отсвет "Земли"
+earthshine.position.set(2.5, -0.5, -1.5); scene.add(earthshine);
+
+// ── Луна (матовая, без бликов) ───────────────────────────────────────────
+const moonGeo = new THREE.SphereGeometry(1, 80, 80);
+const moonMat = new THREE.MeshPhongMaterial({
+    color:    0xffffff,
+    emissive: 0x050504,
+    specular: 0x0a0a09,   // практически нет зеркального блика
+    shininess: 2
+});
+const moon = new THREE.Mesh(moonGeo, moonMat);
+scene.add(moon);
+
+// ── Процедурная текстура с кратерами (фолбэк) ───────────────────────────
+function makeMoonTexture() {
+    const W=2048, H=1024;
+    const c = document.createElement('canvas');
+    c.width=W; c.height=H;
+    const ctx = c.getContext('2d');
+
+    // Base highlands — светло-серый
+    ctx.fillStyle = '#c0b8b0';
+    ctx.fillRect(0, 0, W, H);
+
+    // Шум / зернистость поверхности
+    for(let i=0; i<22000; i++){
+        const px=Math.random()*W, py=Math.random()*H;
+        const v = 130 + Math.floor((Math.random()-0.5)*55);
+        ctx.fillStyle = `rgba(${v},${v-3},${v-7},${Math.random()*0.07})`;
+        ctx.fillRect(px, py, 2+(Math.random()>0.93?2:0), 2);
+    }
+
+    // Морея (тёмные области) — Mare Tranquillitatis, Imbrium, Crisium и др.
+    [
+        [0.44, 0.37, 0.165, 0.115, 0.08],
+        [0.36, 0.42, 0.11,  0.085, 0.0],
+        [0.50, 0.28, 0.135, 0.095,-0.1],
+        [0.35, 0.27, 0.185, 0.130, 0.14],
+        [0.22, 0.38, 0.115, 0.088, 0.0],
+        [0.67, 0.40, 0.090, 0.070, 0.1],
+        [0.58, 0.47, 0.072, 0.056, 0.0],
+        [0.29, 0.30, 0.095, 0.075, 0.0],
+    ].forEach(([cx,cy,rx,ry,rot])=>{
+        ctx.save();
+        ctx.translate(cx*W, cy*H);
+        ctx.rotate(rot);
+        const r = Math.max(rx*W, ry*H);
+        const g = ctx.createRadialGradient(0,0,0,0,0,r);
+        g.addColorStop(0,   'rgba(82,74,66,0.88)');
+        g.addColorStop(0.65,'rgba(82,74,66,0.78)');
+        g.addColorStop(1,   'rgba(82,74,66,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.ellipse(0,0,rx*W,ry*H,0,0,Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+    });
+
+    // Кратеры — 130 штук, разных размеров
+    const craters = Array.from({length:130}, ()=>[
+        Math.random()*W,
+        Math.random()*H,
+        2.5 + Math.pow(Math.random(), 1.7) * 52
+    ]).sort((a,b)=>b[2]-a[2]);  // сначала большие
+
+    craters.forEach(([cx,cy,r])=>{
+        // Тёмное дно кратера
+        const df = ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+        df.addColorStop(0,   `rgba(58,52,46,${Math.min(0.7, 0.28+r/80)})`);
+        df.addColorStop(0.6, `rgba(65,58,52,${Math.min(0.4, 0.15+r/120)})`);
+        df.addColorStop(1,   'rgba(65,58,52,0)');
+        ctx.fillStyle=df;
+        ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+
+        // Светлый ободок (блик от солнца — с одной стороны)
+        ctx.strokeStyle = `rgba(215,208,200,${Math.min(0.6, 0.28+r/90)})`;
+        ctx.lineWidth   = Math.max(0.5, r/10);
+        ctx.beginPath();
+        ctx.arc(cx - r*0.07, cy - r*0.07, r*0.87, Math.PI*0.8, Math.PI*2.3);
+        ctx.stroke();
+
+        // Тёмный ободок с противоположной стороны (тень)
+        ctx.strokeStyle = `rgba(42,36,32,${Math.min(0.5, 0.22+r/110)})`;
+        ctx.lineWidth   = Math.max(0.4, r/13);
+        ctx.beginPath();
+        ctx.arc(cx + r*0.07, cy + r*0.07, r*0.90, Math.PI*2.3, Math.PI*0.8);
+        ctx.stroke();
+
+        // Центральный пик у больших кратеров
+        if(r > 22){
+            ctx.fillStyle = `rgba(200,193,186,0.55)`;
+            ctx.beginPath(); ctx.arc(cx, cy, r*0.07, 0, Math.PI*2); ctx.fill();
+        }
+    });
+
+    return new THREE.CanvasTexture(c);
+}
+
+// ── Загружаем текстуру Луны (3 CDN + процедурный фолбэк) ────────────────
+const tLoader = new THREE.TextureLoader();
+tLoader.crossOrigin = 'anonymous';
+function applyTex(tex){ moonMat.map=tex; moonMat.color.set(0xffffff); moonMat.needsUpdate=true; }
+
+tLoader.load(
+    'https://raw.githubusercontent.com/mrdoob/three.js/r134/examples/textures/planets/moon_1024.jpg', applyTex,
+    undefined,
+    ()=>tLoader.load(
+        'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r134/examples/textures/planets/moon_1024.jpg', applyTex,
+        undefined,
+        ()=>tLoader.load(
+            'https://unpkg.com/three-globe/example/img/moon_texture.jpg', applyTex,
+            undefined,
+            ()=>{ applyTex(makeMoonTexture()); }
+        )
+    )
+);
+
+// ── Слабое свечение по краю (лунный ореол от атмосферы Земли) ───────────
+const haloMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(1.04, 64, 64),
+    new THREE.MeshBasicMaterial({color:0x334466, transparent:true, opacity:.022, side:THREE.BackSide})
+);
+scene.add(haloMesh);
+
+// ── Анимация ─────────────────────────────────────────────────────────────
+function anim() {
+    requestAnimationFrame(anim);
+    moon.rotation.y += 0.0035;   // медленное вращение
+    renderer.render(scene, camera);
+}
+anim();
+
+addEventListener('resize',()=>{ bg.width=innerWidth; bg.height=innerHeight; });
+</script>
+</body>
+</html>

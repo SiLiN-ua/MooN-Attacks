@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MooN Attacks — Live Intelligence</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+    <div class="header-left">
+        <span class="logo">🌙 MooN Attacks</span>
+        <span class="subtitle">// LIVE INTELLIGENCE //</span>
+    </div>
+    <div class="header-center">
+        <span class="stat-pill" onclick="filterEvents('all',this)" title="All events">📡 <b id="h-total">0</b></span>
+        <span class="stat-pill explosion" onclick="filterEvents('explosion',this)" title="Explosions">💥 <b id="h-explosion">0</b></span>
+        <span class="stat-pill drone" onclick="filterEvents('drone',this)" title="Drones">🚁 <b id="h-drone">0</b></span>
+        <span class="stat-pill missile" onclick="filterEvents('missile',this)" title="Missiles">🚀 <b id="h-missile">0</b></span>
+        <span class="stat-pill shot_down" onclick="filterEvents('shot_down',this)" title="Shot down">🛡️ <b id="h-shot_down">0</b></span>
+        <span class="stat-pill flyover" onclick="filterEvents('flyover',this)" title="Flyovers">👁️ <b id="h-flyover">0</b></span>
+    </div>
+    <div class="header-right">
+        <!-- Режими -->
+        <div class="mode-toggle">
+            <button class="mode-btn active" id="btn-live" onclick="setMode('live')">🔴 Live</button>
+            <button class="mode-btn" id="btn-history" onclick="setMode('history')">📅 History</button>
+        </div>
+        <a href="/feed" target="_blank" class="btn-start" style="text-decoration:none">📰 Feed</a>
+        <a href="/report" target="_blank" class="btn-start" style="text-decoration:none;background:#1a1040;border-color:#a855f7;color:#a855f7">📊 Report</a>
+        <div id="monitor-status" class="status-dot offline"></div>
+        <button class="btn-start" id="btn-monitor" onclick="toggleMonitor()">▶ Start</button>
+    </div>
+</header>
+
+<!-- HISTORY BAR -->
+<div id="history-bar" class="history-bar hidden">
+    <span class="history-label">📅 From:</span>
+    <input type="datetime-local" id="dt-from" class="dt-input">
+    <span class="history-label">To:</span>
+    <input type="datetime-local" id="dt-to" class="dt-input">
+    <button class="btn-load" onclick="loadHistorical()">🔍 DB</button>
+    <button class="btn-load btn-tg-load" id="btn-tg-load" onclick="loadFromTelegram()">📥 Load from Telegram</button>
+    <button class="btn-traj" onclick="loadTrajectories()">〰️ Trajectories</button>
+    <span id="history-progress" class="history-progress-label"></span>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="main-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <!-- Фільтри -->
+        <div class="sidebar-block">
+            <h3 class="block-title">🔍 Filters</h3>
+            <div class="filter-group">
+                <button class="filter-btn active" data-type="all" onclick="filterEvents('all', this)">All</button>
+                <button class="filter-btn explosion" data-type="explosion" onclick="filterEvents('explosion', this)">💥 Explosion</button>
+                <button class="filter-btn drone" data-type="drone" onclick="filterEvents('drone', this)">🚁 Drone</button>
+                <button class="filter-btn missile" data-type="missile" onclick="filterEvents('missile', this)">🚀 Missile</button>
+                <button class="filter-btn shot_down" data-type="shot_down" onclick="filterEvents('shot_down', this)">🛡️ Shot down</button>
+                <button class="filter-btn flyover" data-type="flyover" onclick="filterEvents('flyover', this)">👁️ Flyover</button>
+            </div>
+            <input type="text" id="city-filter" class="city-input" placeholder="🏙️ Filter by city..." oninput="filterByCity(this.value)">
+        </div>
+
+        <!-- Маршрут -->
+        <div class="sidebar-block">
+            <h3 class="block-title">🛣️ Route Monitor</h3>
+            <div id="route-cities">
+                <div class="route-city-row">
+                    <input type="text" class="route-input" placeholder="Туапсе, Джанкой...">
+                    <button class="route-del" onclick="removeRouteCity(this)">×</button>
+                </div>
+            </div>
+            <button class="btn-route-add" onclick="addRouteCity()">+ Add city</button>
+            <button class="btn-route-search" onclick="searchRoute()">🔍 Find Events</button>
+            <button class="btn-route-channels" onclick="findRouteChannels()">📡 Find Channels</button>
+            <button class="btn-route-clear" onclick="clearRoute()">✕ Clear</button>
+            <div id="route-channels-result"></div>
+        </div>
+
+        <!-- Канали -->
+        <div class="sidebar-block">
+            <h3 class="block-title">📡 Channels</h3>
+            <div class="add-channel">
+                <input type="text" id="ch-url" placeholder="https://t.me/channel" class="ch-input">
+                <input type="text" id="ch-name" placeholder="Channel name" class="ch-input">
+                <button class="btn-add" onclick="addChannel()"><i class="fas fa-plus"></i> Add</button>
+            </div>
+            <div id="channels-list"></div>
+        </div>
+
+        <!-- Експорт -->
+        <div class="sidebar-block">
+            <h3 class="block-title">📤 Export</h3>
+            <button class="btn-export" onclick="exportData('json')">📄 JSON</button>
+            <button class="btn-export" onclick="exportData('csv')">📊 CSV</button>
+            <button class="btn-export" onclick="exportData('html')">🌐 HTML</button>
+            <button class="btn-export" onclick="clearAllEvents()" style="background:#ff4444;color:#fff;margin-top:8px;width:100%">🗑️ Clear all events</button>
+        </div>
+
+    </aside>
+
+    <!-- MAP -->
+    <div class="map-container">
+        <div id="map"></div>
+        <div class="map-toolbar">
+            <button class="map-tool-btn" onclick="loadLiveTrajectories()" title="Show trajectories">〰️ Trajectories</button>
+            <button class="map-tool-btn" onclick="clearTraj()" title="Clear trajectories">✕</button>
+        </div>
+        <div class="map-legend">
+            <div class="legend-item"><span class="dot explosion"></span> Explosion</div>
+            <div class="legend-item"><span class="dot drone"></span> Drone</div>
+            <div class="legend-item"><span class="dot missile"></span> Missile</div>
+            <div class="legend-item"><span class="dot shot_down"></span> Shot down</div>
+            <div class="legend-item"><span class="dot flyover"></span> Flyover</div>
+            <div class="legend-item"><span class="dot trajectory"></span> Trajectory</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- BOTTOM — повний текст постів -->
+<div class="events-panel">
+    <div class="events-header">
+        <div class="events-tabs">
+            <button class="tab-btn active" onclick="setTab('feed', this)">📋 Live Feed</button>
+            <button class="tab-btn" onclick="setTab('full', this)">📰 Full Posts</button>
+        </div>
+        <div class="panel-controls">
+            <span id="events-count" class="events-count">0 events</span>
+            <button class="btn-panel-toggle" onclick="togglePanel()" id="btn-panel-toggle">▲ Expand</button>
+        </div>
+    </div>
+    <div id="tab-feed" class="events-feed"></div>
+    <div id="tab-full" class="full-posts hidden"></div>
+</div>
+
+<script src="/static/js/main.js"></script>
+</body>
+</html>
