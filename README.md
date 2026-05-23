@@ -91,24 +91,28 @@ Open in browser: **http://localhost:5001**
 
 ```
 MooN-Attacks/
-├── app.py                  # Flask server & API routes
-├── auth_telegram.py        # Telegram authentication
-├── requirements.txt        # Dependencies
+├── app.py                  # Flask server, API routes, SocketIO
+├── auth_telegram.py        # Telegram first-time authentication
+├── export_channels.py      # Utility: export channel list
+├── seed_channels.py        # Utility: pre-load channel list to DB
+├── test_env.py             # Utility: verify environment variables
+├── requirements.txt        # Python dependencies
 ├── .env.example            # Environment template
 ├── core/
 │   ├── db.py               # Database models (Peewee + SQLite)
-│   ├── telegram_monitor.py # Telegram client (Telethon)
-│   ├── reporter.py         # AI report generation (Claude)
-│   ├── geo_parser.py       # City & coordinate extraction
+│   ├── filter.py           # Military keyword classifier (explosions, drones, missiles…)
+│   ├── geo_parser.py       # City & coordinate extraction from message text
+│   ├── reporter.py         # AI report generation (Claude Opus + web search)
+│   ├── telegram_monitor.py # Telegram client (Telethon MTProto)
 │   └── trajectory.py       # Attack route analysis
 ├── templates/
-│   ├── splash.html         # Landing page (3D Moon)
-│   ├── index.html          # Main map page
+│   ├── splash.html         # Landing page (3D Moon — Three.js)
+│   ├── index.html          # Main map page (Leaflet.js)
 │   ├── feed.html           # Live event feed
-│   ├── report.html         # AI intelligence report
-│   └── channel.html        # Channel posts page
+│   ├── report.html         # AI intelligence report viewer
+│   └── channel.html        # Single channel posts view
 └── static/
-    ├── js/main.js          # Map logic & UI
+    ├── js/main.js          # Map logic, export functions
     └── css/                # Styles
 ```
 
@@ -121,7 +125,8 @@ Telegram Channels
       ↓
   Telethon (MTProto) — real-time monitoring or history load
       ↓
-  Platform code — classifies event type, city, coordinates
+  filter.py — keyword classifier (event type)
+  geo_parser.py — extracts city & coordinates
       ↓
   SQLite Database (Peewee ORM)
       ↓
