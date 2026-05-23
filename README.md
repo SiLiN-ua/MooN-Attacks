@@ -1,4 +1,4 @@
-﻿<p align="center">
+<p align="center">
   <img src="https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python&logoColor=white">
   <img src="https://img.shields.io/badge/Flask-2.x-green?style=for-the-badge&logo=flask&logoColor=white">
   <img src="https://img.shields.io/badge/Telegram-MTProto-26A5E4?style=for-the-badge&logo=telegram&logoColor=white">
@@ -39,49 +39,49 @@ MooN Attacks is an open-source OSINT platform for monitoring military events in 
 
 ### 1. Clone the repository
 
-\\\ash
+```bash
 # Via GitHub CLI
 gh repo clone SiLiN-ua/MooN-Attacks
 
 # Via Git
 git clone https://github.com/SiLiN-ua/MooN-Attacks
-\\\
+```
 
 ### 2. Install dependencies
 
-\\\ash
+```bash
 pip install -r requirements.txt
-\\\
+```
 
 ### 3. Configure API keys
 
-\\\ash
+```bash
 cp .env.example .env
-\\\
+```
 
-Edit .env and fill in your credentials:
+Edit `.env` and fill in your credentials:
 
-\\\env
+```env
 TELEGRAM_API_ID=your_api_id
 TELEGRAM_API_HASH=your_api_hash
 TELEGRAM_PHONE=+380XXXXXXXXX
 ANTHROPIC_API_KEY=your_anthropic_api_key
-\\\
+```
 
-> **Get Telegram API keys:** https://my.telegram.org/apps
+> **Get Telegram API keys:** https://my.telegram.org/apps  
 > **Get Anthropic API key:** https://console.anthropic.com
 
 ### 4. Authenticate Telegram (first time only)
 
-\\\ash
+```bash
 python auth_telegram.py
-\\\
+```
 
 ### 5. Run
 
-\\\ash
+```bash
 python app.py
-\\\
+```
 
 Open in browser: **http://localhost:5001**
 
@@ -89,7 +89,7 @@ Open in browser: **http://localhost:5001**
 
 ## Project Structure
 
-\\\
+```
 MooN-Attacks/
 ├── app.py                  # Flask server & API routes
 ├── auth_telegram.py        # Telegram authentication
@@ -110,13 +110,13 @@ MooN-Attacks/
 └── static/
     ├── js/main.js          # Map logic & UI
     └── css/                # Styles
-\\\
+```
 
 ---
 
 ## How It Works
 
-\\\
+```
 Telegram Channels
       ↓
   Telethon (MTProto) — real-time monitoring or history load
@@ -132,7 +132,7 @@ Leaflet Map           Live Feed
      ↓
   Claude AI → Intelligence Report
   (web search + source links + analysis)
-\\\
+```
 
 ---
 
@@ -140,11 +140,11 @@ Leaflet Map           Live Feed
 
 | URL | Description |
 |-----|-------------|
-| / | Splash screen with animated Moon |
-| /map | Live interactive map |
-| /feed | Live event feed |
-| /report | AI intelligence report generator |
-| /channel/<name> | Posts from a specific channel |
+| `/` | Splash screen with animated Moon |
+| `/map` | Live interactive map |
+| `/feed` | Live event feed |
+| `/report` | AI intelligence report generator |
+| `/channel/<name>` | Posts from a specific channel |
 
 ---
 
