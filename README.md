@@ -12,6 +12,18 @@
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="static/img/picture1.png" alt="MooN Attacks — Live Map" width="100%">
+</p>
+
+<p align="center">
+  <img src="static/img/picture2.png" alt="MooN Attacks — Intelligence Report" width="100%">
+</p>
+
+---
+
 ## What is MooN Attacks?
 
 MooN Attacks is an open-source OSINT platform for monitoring military events in real time via Telegram channels. It automatically collects messages, classifies events (explosions, drones, missiles, etc.), plots them on an interactive map, and generates AI-powered intelligence reports.
